@@ -55,7 +55,7 @@ class MidiController:
             self.send_lp_cc(self.prev_instrument_key, self.colors["GREEN_LOW"])
             self.send_lp_cc(self.prev_10_instruments_key, self.colors["GREEN_LOW"])
 
-        if current < max - 1:
+        if current < max:
             self.send_lp_cc(self.next_instrument_key, self.colors["GREEN"])
             self.send_lp_cc(self.next_10_instruments_key, self.colors["GREEN"])
         else:
@@ -65,11 +65,10 @@ class MidiController:
     # TODO: refactor arguments...
     def init_layout(self, current_mode, octave):
         self.reset_layout()
-
-        # self.send_lp_cc(self.modes[current_mode], 62)  # TODO: create const for colors
-
+        self.send_lp_cc(self.modes[current_mode], self.colors["AMBER"])
         # LEDs for mode 0
         if current_mode == 0:
+            self.send_lp_cc(self.modes[current_mode], self.colors["AMBER"])
             self.setup_octaves(octave)
             for x in self.note_keys:
                 self.send_lp_note(x, self.colors["YELLOW"])

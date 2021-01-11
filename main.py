@@ -7,57 +7,6 @@ import threading
 import utils.synth as synth
 from utils.midi import MidiController
 
-# FUNCTIONS
-
-
-def check_device():
-    while 1:
-        if DEVICE_PORT_NAME in mido.get_input_names():
-            print('DEVICE OK', mido.get_input_names())
-        else:
-            print('Wait for', DEVICE_PORT_NAME)
-        time.sleep(2)
-
-
-def check_launchpad():
-    print('run check')
-    # TODO: check for unplug / replug....
-    check = True
-    while check == True:
-        if DEVICE_PORT_NAME in mido.get_input_names():
-            check = False
-        else:
-            print('Wait for', DEVICE_PORT_NAME)
-            time.sleep(2)
-
-
-def end_process_handler(signal, frame):
-    ctrl.reset_layout()
-    sys.exit(0)
-
-
-def send_note(message, note, octave, press_color, release_color):
-    if message.velocity == 127:
-        ctrl.send_lp_note(message.note, press_color)
-        synth.play(note, octave)
-    else:
-        ctrl.send_lp_note(message.note, release_color)
-        synth.stop(note, octave)
-
-
-def update_instrument(value):
-    new_instrument = SYNTH_DATA[mode]["INSTRUMENT"] + value
-    if new_instrument < SYNTH_DATA[mode]["INSTRUMENT_MIN"]:
-        new_instrument = SYNTH_DATA[mode]["INSTRUMENT_MIN"]
-    if new_instrument > SYNTH_DATA[mode]["INSTRUMENT_MAX"]:
-        new_instrument = SYNTH_DATA[mode]["INSTRUMENT_MAX"]
-
-    SYNTH_DATA[mode]["INSTRUMENT"] = new_instrument
-    print("SET INSTRUMENT:", 'bank', SYNTH_DATA[mode]["BANK"], 'instrument', SYNTH_DATA[mode]["INSTRUMENT"])
-    synth.set_instrument(SYNTH_DATA[mode]["BANK"], SYNTH_DATA[mode]["INSTRUMENT"])
-    ctrl.setup_instrument_navigator(SYNTH_DATA[mode]["INSTRUMENT"], SYNTH_DATA[mode]["INSTRUMENT_MIN"], SYNTH_DATA[mode]["INSTRUMENT_MAX"])
-
-
 # CONSTANTS
 DEVICE_PORT_NAME = "Launchpad"
 SF2 = "sf2/VintageDreamsWaves-v2.sf2"
@@ -82,11 +31,58 @@ SYNTH_DATA = [
 mode = 0
 octave = 3
 ctrl = None
+# FUNCTIONS
+
+
+def device_listener():
+    device_initialized = False
+    while 1:
+        if DEVICE_PORT_NAME in mido.get_input_names():
+            if device_initialized == False and not ctrl is None:
+                print('init device layout')
+                ctrl.init_layout(mode, octave)
+                update_instrument()
+                device_initialized = True
+        else:
+            device_initialized = False
+        time.sleep(2)
+
+
+def end_process_handler(signal, frame):
+    ctrl.reset_layout()
+    sys.exit(0)
+
+
+def send_note(message, note, octave, press_color, release_color):
+    if message.velocity == 127:
+        ctrl.send_lp_note(message.note, press_color)
+        synth.play(note, octave)
+    else:
+        ctrl.send_lp_note(message.note, release_color)
+        synth.stop(note, octave)
+
+
+def update_instrument(increment=0):
+    new_instrument = SYNTH_DATA[mode]["INSTRUMENT"] + increment
+    if new_instrument < SYNTH_DATA[mode]["INSTRUMENT_MIN"]:
+        new_instrument = SYNTH_DATA[mode]["INSTRUMENT_MIN"]
+    if new_instrument > SYNTH_DATA[mode]["INSTRUMENT_MAX"]:
+        new_instrument = SYNTH_DATA[mode]["INSTRUMENT_MAX"]
+
+    SYNTH_DATA[mode]["INSTRUMENT"] = new_instrument
+    print("set instrument", 'bank', SYNTH_DATA[mode]["BANK"], 'instrument', SYNTH_DATA[mode]["INSTRUMENT"])
+    synth.set_instrument(SYNTH_DATA[mode]["BANK"], SYNTH_DATA[mode]["INSTRUMENT"])
+    ctrl.setup_instrument_navigator(SYNTH_DATA[mode]["INSTRUMENT"], SYNTH_DATA[mode]["INSTRUMENT_MIN"], SYNTH_DATA[mode]["INSTRUMENT_MAX"])
+
 
 # MAIN
-thread = threading.Thread(target=check_device)
+thread = threading.Thread(target=device_listener)
 thread.daemon = True
 thread.start()
+
+while not DEVICE_PORT_NAME in mido.get_input_names():
+    print('Wait for', DEVICE_PORT_NAME)
+    time.sleep(2)
 
 signal.signal(signal.SIGINT, end_process_handler)
 signal.signal(signal.SIGTERM, end_process_handler)
@@ -96,13 +92,10 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
         print('OUTPUT PORT: {}'.format(output_port))
         print('INPUT PORT: {}'.format(input_port))
 
-        ctrl = MidiController(output_port)
-        ctrl.init_layout(mode, octave)
-
         synth.load_sf2(SF2)
-        update_instrument(0)
+        ctrl = MidiController(output_port)
 
-        print('Waiting for input..')
+        print('Waiting for midi messages..')
 
         for message in input_port:
             print('Received {}'.format(message))
