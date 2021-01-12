@@ -12,8 +12,10 @@ from utils.midi import MidiController
 # ----------------------------------------------------------------------------------------------------------------------
 DEVICE_PORT_NAME = "Launchpad"
 SF2 = "sf2/VintageDreamsWaves-v2.sf2"
-NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B']
-SEMI_NOTES = [None, 'C#', 'D#', None, 'F#', 'G#', 'A#']
+NOTES_MATRIX = [
+    [None, 'C#', 'D#', None, 'F#', 'G#', 'A#'],
+    ['C', 'D', 'E', 'F', 'G', 'A', 'B']
+]
 SYNTH_DATA = [
     {
         "BANK": 0,
@@ -32,7 +34,7 @@ SYNTH_DATA = [
 # APPLICATION STATE
 # ----------------------------------------------------------------------------------------------------------------------
 mode = 0
-octave = 3
+octave = 2
 ctrl = None
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -59,13 +61,16 @@ def end_process_handler(signal, frame):
     sys.exit(0)
 
 
-def send_note(message, note, octave, press_color, release_color):
+def send_note(message, x, y):
+    n = NOTES_MATRIX[y % 2][x]
+    o = int(message.note / 32) + octave
     if message.velocity == 127:
-        ctrl.send_lp_note(message.note, press_color)
-        synth.play(note, octave)
+        print('Play Note', n + '-' + str(o))
+        ctrl.send_lp_note(message.note, ctrl.colors["GREEN"])
+        synth.play(n, o)
     else:
-        ctrl.send_lp_note(message.note, release_color)
-        synth.stop(note, octave)
+        ctrl.send_lp_note(message.note, ctrl.colors["YELLOW"] if btn_row % 2 != 0 else ctrl.colors["AMBER"])
+        synth.stop(n, o)
 
 
 def update_instrument(increment=0):
@@ -120,19 +125,12 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                         update_instrument(-10)
 
                 if message.type == 'note_on':
+                    btn_col = message.note % 16
+                    btn_row = int(message.note / 16)
                     # OCTAVE
                     if message.note in ctrl.octave_keys:
-                        octave = message.note % 16
+                        octave = btn_row
                         ctrl.setup_octaves(octave)
                     # NOTES
-                    if message.note in ctrl.note_keys:
-                        n = NOTES[message.note % 16]
-                        o = int(message.note / 32) - 2 + octave
-                        print('NOTE', str(n) + '-' + str(o))
-                        send_note(message, n, o, ctrl.colors["GREEN"], ctrl.colors["YELLOW"])
-                    # SEMI_NOTES
-                    if message.note in ctrl.semi_note_keys:
-                        n = SEMI_NOTES[message.note % 16]
-                        o = int(message.note / 32) - 2 + octave
-                        print('SEMI_NOTE', str(n) + '-' + str(o))
-                        send_note(message, n, o, ctrl.colors["GREEN"], ctrl.colors["AMBER"])
+                    if ctrl.is_note_keys(btn_col, btn_row):
+                        send_note(message, btn_col, btn_row)
