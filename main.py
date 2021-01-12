@@ -11,7 +11,7 @@ from utils.midi import MidiController
 # CONSTANTS
 # ----------------------------------------------------------------------------------------------------------------------
 DEVICE_PORT_NAME = "Launchpad"
-SF2 = "sf2/VintageDreamsWaves-v2.sf2"
+SF2 = "resources/sf2/VintageDreamsWaves-v2.sf2"
 NOTES_MATRIX = [
     [None, 'C#', 'D#', None, 'F#', 'G#', 'A#'],
     ['C', 'D', 'E', 'F', 'G', 'A', 'B']
@@ -31,13 +31,18 @@ SYNTH_DATA = [
         "INSTRUMENT": 2
     }
 ]
+SONGS = {
+    8: "resources/midi/rollem.mid"
+}
 # ----------------------------------------------------------------------------------------------------------------------
 # APPLICATION STATE
 # ----------------------------------------------------------------------------------------------------------------------
 mode = 0
 octave = 2
 ctrl = None
-
+song_is_playing = False
+playT = None
+playTKey = None
 # ----------------------------------------------------------------------------------------------------------------------
 # FUNCTIONS
 # ----------------------------------------------------------------------------------------------------------------------
@@ -92,6 +97,37 @@ def update_instrument(increment=0):
     ctrl.setup_instrument_navigator(SYNTH_DATA[mode]["INSTRUMENT"], SYNTH_DATA[mode]["INSTRUMENT_MIN"], SYNTH_DATA[mode]["INSTRUMENT_MAX"])
 
 
+def play_midi_song(song):
+    global song_is_playing
+    if song_is_playing == False:
+        song_is_playing = True
+        for msg in mido.MidiFile(song).play():
+            if song_is_playing == True:
+                if msg.type == 'note_on':
+                    synth.play_midi(msg.note, msg.velocity)
+            else:
+                # TODO: debug....note stucks
+                synth.stop_all()
+                break
+
+
+def playing_key(key):
+    global song_is_playing
+    col = 0
+    while 1:
+        if song_is_playing == True:
+            if col == 0:
+                ctrl.send_lp_note(key, ctrl.colors["GREEN"])
+                col = 1
+            else:
+                ctrl.send_lp_note(key, ctrl.colors["GREEN_LOW"])
+                col = 0
+            time.sleep(0.5)
+        else:
+            ctrl.send_lp_note(key, ctrl.colors["GREEN_LOW"])
+            break
+
+
 # ----------------------------------------------------------------------------------------------------------------------
 # MAIN
 # ----------------------------------------------------------------------------------------------------------------------
@@ -139,12 +175,23 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                         update_instrument(-10)
 
                 if message.type == 'note_on':
-                    btn_col = message.note % 16
-                    btn_row = int(message.note / 16)
-                    # OCTAVE
-                    if message.note in ctrl.octave_keys:
-                        octave = btn_row
-                        ctrl.setup_octaves(octave)
-                    # NOTES
-                    if ctrl.is_note_keys(btn_col, btn_row):
-                        send_note(message, btn_col, btn_row)
+                    if song_is_playing == False:
+                        btn_col = message.note % 16
+                        btn_row = int(message.note / 16)
+                        # OCTAVE
+                        if message.note in ctrl.octave_keys:
+                            octave = btn_row
+                            ctrl.setup_octaves(octave)
+                        # NOTES
+                        if ctrl.is_note_keys(btn_col, btn_row):
+                            send_note(message, btn_col, btn_row)
+                    # SONGS
+                    if message.note in ctrl.song_keys and message.velocity == 127:
+                        song = SONGS.get(message.note, None)
+                        if song and song_is_playing == False:
+                            playT = threading.Thread(target=play_midi_song, args=[song])
+                            playT.start()
+                            playTKey = threading.Thread(target=playing_key, args=[message.note])
+                            playTKey.start()
+                        else:
+                            song_is_playing = False

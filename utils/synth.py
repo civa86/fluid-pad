@@ -19,5 +19,16 @@ def play(note, octave):
     fluidsynth.play_Note(Note(note, octave), SYNTH_CHANNEL, 100)
 
 
+def play_midi(midi_note, velocity):
+    if velocity == 0:
+        fluidsynth.stop_Note(midi_note, SYNTH_CHANNEL)
+    else:
+        fluidsynth.play_Note(midi_note, SYNTH_CHANNEL, velocity)
+
+
 def stop(note, octave):
     fluidsynth.stop_Note(Note(note, octave), SYNTH_CHANNEL)
+
+
+def stop_all():
+    fluidsynth.stop_everything()

@@ -9,6 +9,7 @@ class MidiController:
         "AMBER": 63,
         "RED": 15,
         "RED_LOW": 13,
+        "GREEN_FLASH": 56
     }
     note_min = 112
     note_max = 118
@@ -22,6 +23,7 @@ class MidiController:
     semi_notes_void_col = [0, 3]
     octave_keys = [7, 23, 39, 55, 71, 87, 103, 119]
     mode_keys = [109, 110, 111]
+    song_keys = [8, 24, 40, 56, 72, 88, 104, 120]
 
     def __init__(self, port):
         self.port = port
@@ -72,6 +74,8 @@ class MidiController:
 
         if current_mode == 0:
             self.setup_octaves(octave)
+            for x in self.song_keys:
+                self.send_lp_note(x, self.colors["GREEN_LOW"])
             for x in range(0, self.notes_keys_col):
                 for y in range(0, 8):
                     if self.is_note_keys(x, y):
