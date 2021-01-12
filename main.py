@@ -16,6 +16,7 @@ NOTES_MATRIX = [
     [None, 'C#', 'D#', None, 'F#', 'G#', 'A#'],
     ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 ]
+MODES_WITH_SOUND = [0, 1]
 SYNTH_DATA = [
     {
         "BANK": 0,
@@ -47,9 +48,7 @@ def device_listener():
     while 1:
         if DEVICE_PORT_NAME in mido.get_input_names():
             if device_initialized == False and not ctrl is None:
-                print('init device layout')
-                ctrl.init_layout(mode, octave)
-                update_instrument()
+                init()
                 device_initialized = True
         else:
             device_initialized = False
@@ -71,6 +70,13 @@ def send_note(message, x, y):
     else:
         ctrl.send_lp_note(message.note, ctrl.colors["YELLOW"] if btn_row % 2 != 0 else ctrl.colors["AMBER"])
         synth.stop(n, o)
+
+
+def init():
+    print('init mode', mode)
+    ctrl.init_layout(mode, octave)
+    if mode in MODES_WITH_SOUND:
+        update_instrument()
 
 
 def update_instrument(increment=0):
@@ -112,6 +118,14 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
 
         for message in input_port:
             print('Received {}'.format(message))
+            # SWITCH MODES
+            if message.type == 'control_change' and message.value == 127 and message.control in ctrl.mode_keys:
+                new_mode = ctrl.mode_keys.index(message.control)
+                if new_mode != mode:
+                    mode = new_mode
+                    init()
+                    # TODO: manage instrument....
+
             if mode == 0:
                 if message.type == 'control_change' and message.value == 127:
                     # INSTRUMENT NAVIGATOR
