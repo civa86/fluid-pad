@@ -45,8 +45,6 @@ mode = 0
 octave = 2
 ctrl = None
 song_playing = None
-playT = None
-playTKey = None
 # ----------------------------------------------------------------------------------------------------------------------
 # FUNCTIONS
 # ----------------------------------------------------------------------------------------------------------------------
@@ -105,11 +103,18 @@ def update_instrument(increment=0):
 
 def play_midi_song(song):
     global song_playing
+    last_note = None
     if song_playing is None:
         song_playing = song
         for msg in mido.MidiFile(song).play():
             if song_playing is not None:
                 if msg.type == 'note_on':
+
+                    # if last_note is not None:
+                    # ctrl.send_lp_note(last_note, ctrl.colors["YELLOW"])
+                    # ctrl.send_lp_note(msg.note, ctrl.colors["GREEN"])
+                    # last_note = msg.note
+
                     synth.play_midi(msg.note, msg.velocity)
             else:
                 synth.stop_all()
@@ -132,6 +137,13 @@ def playing_key(key):
         else:
             ctrl.send_lp_note(key, ctrl.colors["GREEN_LOW"])
             break
+
+
+def start_playing_song(song, message):
+    playT = threading.Thread(target=play_midi_song, args=[song])
+    playT.start()
+    playTKey = threading.Thread(target=playing_key, args=[message.note])
+    playTKey.start()
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -198,17 +210,11 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                     if message.note in ctrl.song_keys and message.velocity == 127:
                         song = SONGS.get(message.note, None)
                         if song and song_playing is None:
-                            playT = threading.Thread(target=play_midi_song, args=[song])
-                            playT.start()
-                            playTKey = threading.Thread(target=playing_key, args=[message.note])
-                            playTKey.start()
+                            start_playing_song(song, message)
                         else:
                             if song != song_playing:
                                 song_playing = None
                                 time.sleep(0.5)
-                                playT = threading.Thread(target=play_midi_song, args=[song])
-                                playT.start()
-                                playTKey = threading.Thread(target=playing_key, args=[message.note])
-                                playTKey.start()
+                                start_playing_song(song, message)
                             else:
                                 song_playing = None
