@@ -1,5 +1,7 @@
 import mido
 
+from utils.log import debug
+
 
 class MidiController:
     colors = {
@@ -83,4 +85,4 @@ class MidiController:
                         col = self.colors["AMBER"] if y % 2 == 0 else self.colors["YELLOW"]
                         self.send_lp_note(n, col)
         elif current_mode == 2:
-            print('init_layout for mode 2...')
+            debug('init_layout for mode 2...')

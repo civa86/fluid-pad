@@ -1,13 +1,16 @@
 import sys
+
 from mingus.midi import fluidsynth
 from mingus.containers import Note
+
+from utils.log import debug
 
 SYNTH_CHANNEL = 1
 
 
 def load_sf2(SF2):
     if not fluidsynth.init(SF2):
-        print("Couldn't load soundfont", SF2)
+        debug("Couldn't load soundfont", SF2)
         sys.exit(1)
 
 
@@ -38,3 +41,18 @@ def note_from_int(value):
     c = Note()
     c.from_int(value)
     return c
+
+
+def volume():
+    debug('settings....')
+    # fluidsynth.fs.fluid_settings_setnum(fluidsynth.midi.fs.settings, b"synth.gain", 0.8)
+
+    # fluidsynth.fs.fluid_settings_setnum(fluidsynth.midi.fs.settings, b"synth.chorus.level", 1)
+    # fluidsynth.fs.fluid_settings_setnum(fluidsynth.midi.fs.settings, b"synth.chorus.speed", 2)
+    # fluidsynth.fs.fluid_settings_setnum(fluidsynth.midi.fs.settings, b"synth.chorus.depth", 40)
+
+    # fluidsynth.fs.fluid_settings_setnum(fluidsynth.midi.fs.settings, b"synth.reverb.level", 1)
+    # fluidsynth.fs.fluid_settings_setnum(fluidsynth.midi.fs.settings, b"synth.reverb.room-size", 0.1)
+    # fluidsynth.fs.fluid_settings_setnum(fluidsynth.midi.fs.settings, b"synth.reverb.width", 5)
+
+    # debug(dir(fluidsynth.fs))

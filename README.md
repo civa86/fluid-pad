@@ -11,5 +11,5 @@ npm i -g nodemon
 Run nodemon with main script
 
 ```bash
-nodemon --exec python main.py
+LOGLEVEL=DEBUG  nodemon --exec python main.py
 ```

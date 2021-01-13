@@ -1,9 +1,12 @@
 import sys
+import os
 import signal
 import time
-import mido
 import threading
 
+import mido
+
+from utils.log import set_log_level, debug
 import utils.synth as synth
 from utils.midi import MidiController
 
@@ -73,7 +76,7 @@ def send_note(message, x, y):
     n = NOTES_MATRIX[y % 2][x]
     o = int(message.note / 32) + octave
     if message.velocity == 127:
-        print('Play Note', n + '-' + str(o))
+        debug('Play Note', n + '-' + str(o))
         ctrl.send_lp_note(message.note, ctrl.colors["GREEN"])
         synth.play(n, o)
     else:
@@ -82,7 +85,7 @@ def send_note(message, x, y):
 
 
 def init():
-    print('init mode', mode)
+    debug('init mode', mode)
     ctrl.init_layout(mode, octave)
     if mode in MODES_WITH_SOUND:
         update_instrument()
@@ -96,7 +99,7 @@ def update_instrument(increment=0):
         new_instrument = SYNTH_DATA[mode]["INSTRUMENT_MAX"]
 
     SYNTH_DATA[mode]["INSTRUMENT"] = new_instrument
-    print("set instrument", 'bank', SYNTH_DATA[mode]["BANK"], 'instrument', SYNTH_DATA[mode]["INSTRUMENT"])
+    debug("set instrument", 'bank', SYNTH_DATA[mode]["BANK"], 'instrument', SYNTH_DATA[mode]["INSTRUMENT"])
     synth.set_instrument(SYNTH_DATA[mode]["BANK"], SYNTH_DATA[mode]["INSTRUMENT"])
     ctrl.setup_instrument_navigator(SYNTH_DATA[mode]["INSTRUMENT"], SYNTH_DATA[mode]["INSTRUMENT_MIN"], SYNTH_DATA[mode]["INSTRUMENT_MAX"])
 
@@ -140,21 +143,24 @@ def playing_key(key):
 
 
 def start_playing_song(song, message):
-    playT = threading.Thread(target=play_midi_song, args=[song])
-    playT.start()
-    playTKey = threading.Thread(target=playing_key, args=[message.note])
-    playTKey.start()
+    play_midi_song_thread = threading.Thread(target=play_midi_song, args=[song])
+    play_midi_song_thread.start()
+    playing_key_thread = threading.Thread(target=playing_key, args=[message.note])
+    playing_key_thread.start()
 
 
 # ----------------------------------------------------------------------------------------------------------------------
 # MAIN
 # ----------------------------------------------------------------------------------------------------------------------
-thread = threading.Thread(target=device_listener)
-thread.daemon = True
-thread.start()
+LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO').upper()
+set_log_level(LOGLEVEL)
+
+device_listener_thread = threading.Thread(target=device_listener)
+device_listener_thread.daemon = True
+device_listener_thread.start()
 
 while not DEVICE_PORT_NAME in mido.get_input_names():
-    print('Wait for', DEVICE_PORT_NAME)
+    debug('Wait for', DEVICE_PORT_NAME)
     time.sleep(2)
 
 signal.signal(signal.SIGINT, end_process_handler)
@@ -162,16 +168,17 @@ signal.signal(signal.SIGTERM, end_process_handler)
 
 with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
     with mido.open_input(DEVICE_PORT_NAME, autoreset=True) as input_port:
-        print('OUTPUT PORT: {}'.format(output_port))
-        print('INPUT PORT: {}'.format(input_port))
+        debug('OUTPUT PORT: {}'.format(output_port))
+        debug('INPUT PORT: {}'.format(input_port))
 
         synth.load_sf2(SF2)
         ctrl = MidiController(output_port)
+        synth.volume()
 
-        print('Waiting for midi messages..')
+        debug('Waiting for midi messages..')
 
         for message in input_port:
-            print('Received {}'.format(message))
+            debug('Received {}'.format(message))
             # SWITCH MODES
             if message.type == 'control_change' and message.value == 127 and message.control in ctrl.mode_keys:
                 new_mode = ctrl.mode_keys.index(message.control)
