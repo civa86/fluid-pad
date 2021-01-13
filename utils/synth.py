@@ -16,7 +16,7 @@ def set_instrument(bank, instrument):
 
 
 def play(note, octave):
-    fluidsynth.play_Note(Note(note, octave), SYNTH_CHANNEL, 100)
+    fluidsynth.play_Note(Note(note, octave), SYNTH_CHANNEL, 127)
 
 
 def play_midi(midi_note, velocity):
@@ -32,3 +32,9 @@ def stop(note, octave):
 
 def stop_all():
     fluidsynth.stop_everything()
+
+
+def note_from_int(value):
+    c = Note()
+    c.from_int(value)
+    return c

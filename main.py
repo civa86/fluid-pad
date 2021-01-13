@@ -32,7 +32,11 @@ SYNTH_DATA = [
     }
 ]
 SONGS = {
-    8: "resources/midi/rollem.mid"
+    8: "resources/midi/sw.mid",
+    24: "resources/midi/stangata.mid",
+    40: "resources/midi/x_files.mid",
+    56: "resources/midi/rollem.mid",
+    72: "resources/midi/exodus.mid",
 }
 # ----------------------------------------------------------------------------------------------------------------------
 # APPLICATION STATE
@@ -40,7 +44,7 @@ SONGS = {
 mode = 0
 octave = 2
 ctrl = None
-song_is_playing = False
+song_playing = None
 playT = None
 playTKey = None
 # ----------------------------------------------------------------------------------------------------------------------
@@ -49,6 +53,7 @@ playTKey = None
 
 
 def device_listener():
+    global song_playing
     device_initialized = False
     while 1:
         if DEVICE_PORT_NAME in mido.get_input_names():
@@ -56,8 +61,9 @@ def device_listener():
                 init()
                 device_initialized = True
         else:
+            song_playing = None
             device_initialized = False
-        time.sleep(2)
+        time.sleep(1)
 
 
 def end_process_handler(signal, frame):
@@ -98,24 +104,24 @@ def update_instrument(increment=0):
 
 
 def play_midi_song(song):
-    global song_is_playing
-    if song_is_playing == False:
-        song_is_playing = True
+    global song_playing
+    if song_playing is None:
+        song_playing = song
         for msg in mido.MidiFile(song).play():
-            if song_is_playing == True:
+            if song_playing is not None:
                 if msg.type == 'note_on':
                     synth.play_midi(msg.note, msg.velocity)
             else:
-                # TODO: debug....note stucks
                 synth.stop_all()
                 break
+        song_playing = None
 
 
 def playing_key(key):
-    global song_is_playing
+    global song_playing
     col = 0
     while 1:
-        if song_is_playing == True:
+        if song_playing is not None:
             if col == 0:
                 ctrl.send_lp_note(key, ctrl.colors["GREEN"])
                 col = 1
@@ -164,6 +170,9 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
 
             if mode == 0:
                 if message.type == 'control_change' and message.value == 127:
+                    if song_playing is not None:
+                        song_playing = None
+
                     # INSTRUMENT NAVIGATOR
                     if message.control == ctrl.next_instrument_key:
                         update_instrument(1)
@@ -175,7 +184,7 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                         update_instrument(-10)
 
                 if message.type == 'note_on':
-                    if song_is_playing == False:
+                    if song_playing is None:
                         btn_col = message.note % 16
                         btn_row = int(message.note / 16)
                         # OCTAVE
@@ -188,10 +197,18 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                     # SONGS
                     if message.note in ctrl.song_keys and message.velocity == 127:
                         song = SONGS.get(message.note, None)
-                        if song and song_is_playing == False:
+                        if song and song_playing is None:
                             playT = threading.Thread(target=play_midi_song, args=[song])
                             playT.start()
                             playTKey = threading.Thread(target=playing_key, args=[message.note])
                             playTKey.start()
                         else:
-                            song_is_playing = False
+                            if song != song_playing:
+                                song_playing = None
+                                time.sleep(0.5)
+                                playT = threading.Thread(target=play_midi_song, args=[song])
+                                playT.start()
+                                playTKey = threading.Thread(target=playing_key, args=[message.note])
+                                playTKey.start()
+                            else:
+                                song_playing = None
