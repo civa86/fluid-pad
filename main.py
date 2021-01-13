@@ -34,9 +34,9 @@ SYNTH_DATA = [
 SONGS = {
     8: "resources/midi/sw.mid",
     24: "resources/midi/stangata.mid",
-    40: "resources/midi/x_files.mid",
-    56: "resources/midi/rollem.mid",
-    72: "resources/midi/exodus.mid",
+    40: "resources/midi/jammin.mid",
+    56: "resources/midi/simpson.mid",
+    72: "resources/midi/rollem.mid",
 }
 # ----------------------------------------------------------------------------------------------------------------------
 # APPLICATION STATE
