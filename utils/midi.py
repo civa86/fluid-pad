@@ -74,7 +74,7 @@ class MidiController:
         self.reset_layout()
         self.send_lp_cc(self.mode_keys[current_mode], self.colors["AMBER"])
 
-        if current_mode == 0:
+        if current_mode == 0 or current_mode == 1:
             self.setup_octaves(octave)
             for x in self.song_keys:
                 self.send_lp_note(x, self.colors["GREEN_LOW"])

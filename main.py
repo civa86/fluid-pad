@@ -29,18 +29,25 @@ SYNTH_DATA = [
     },
     {
         "BANK": 128,
-        "INSTRUMENT_MIN": 2,
-        "INSTRUMENT_MAX": 2,
-        "INSTRUMENT": 2
+        "INSTRUMENT_MIN": 0,
+        "INSTRUMENT_MAX": 7,
+        "INSTRUMENT": 0
     }
 ]
-SONGS = {
-    8: "resources/midi/sw.mid",
-    24: "resources/midi/stangata.mid",
-    40: "resources/midi/jammin.mid",
-    56: "resources/midi/simpson.mid",
-    72: "resources/midi/rollem.mid",
-}
+SONGS = [
+    {
+        8: "resources/midi/sw.mid",
+        24: "resources/midi/stangata.mid",
+        40: "resources/midi/jammin.mid",
+        56: "resources/midi/simpson.mid",
+        72: "resources/midi/rollem.mid",
+    },
+    {
+        8: "resources/midi/loop1.mid",
+        24: "resources/midi/loop2.mid",
+        40: "resources/midi/loop3.mid"
+    }
+]
 # ----------------------------------------------------------------------------------------------------------------------
 # APPLICATION STATE
 # ----------------------------------------------------------------------------------------------------------------------
@@ -187,7 +194,7 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                     init()
                     # TODO: manage instrument....
 
-            if mode == 0:
+            if mode == 0 or mode == 1:
                 if message.type == 'control_change' and message.value == 127:
                     if song_playing is not None:
                         song_playing = None
@@ -215,7 +222,7 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                             send_note(message, btn_col, btn_row)
                     # SONGS
                     if message.note in ctrl.song_keys and message.velocity == 127:
-                        song = SONGS.get(message.note, None)
+                        song = SONGS[mode].get(message.note, None)
                         if song and song_playing is None:
                             start_playing_song(song, message)
                         else:
