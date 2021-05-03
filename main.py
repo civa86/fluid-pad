@@ -75,7 +75,9 @@ def device_listener():
 
 
 def end_process_handler(signal, frame):
-    ctrl.reset_layout()
+    if ctrl is not None:
+        ctrl.reset_layout()
+    debug('gracefully exiting')
     sys.exit(0)
 
 
@@ -166,12 +168,12 @@ device_listener_thread = threading.Thread(target=device_listener)
 device_listener_thread.daemon = True
 device_listener_thread.start()
 
+signal.signal(signal.SIGINT, end_process_handler)
+signal.signal(signal.SIGTERM, end_process_handler)
+
 while not DEVICE_PORT_NAME in mido.get_input_names():
     debug('Wait for', DEVICE_PORT_NAME)
     time.sleep(2)
-
-signal.signal(signal.SIGINT, end_process_handler)
-signal.signal(signal.SIGTERM, end_process_handler)
 
 with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
     with mido.open_input(DEVICE_PORT_NAME, autoreset=True) as input_port:
