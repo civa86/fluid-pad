@@ -27,6 +27,8 @@ class MidiController:
     mode_keys = [109, 110, 111]
     song_keys = [8, 24, 40, 56, 72, 88, 104, 120]
 
+    drum_keys_col = 8
+
     def __init__(self, port):
         self.port = port
 
@@ -66,23 +68,35 @@ class MidiController:
             self.send_lp_cc(self.next_instrument_key, self.colors["GREEN_LOW"])
             self.send_lp_cc(self.next_10_instruments_key, self.colors["GREEN_LOW"])
 
+    def setup_drum_navigator(self, current, keys):
+        for x in keys:
+            current_color = self.colors["RED"] if x == current else self.colors["RED_LOW"]
+            self.send_lp_note(x, current_color)
+
     def is_note_keys(self, x, y):
         return x < self.notes_keys_col and (y % 2 != 0 or not x in self.semi_notes_void_col)
 
-    # TODO: refactor arguments...
     def init_layout(self, current_mode, octave):
         self.reset_layout()
         self.send_lp_cc(self.mode_keys[current_mode], self.colors["AMBER"])
 
-        if current_mode == 0 or current_mode == 1:
+        if current_mode == 0:
             self.setup_octaves(octave)
-            for x in self.song_keys:
-                self.send_lp_note(x, self.colors["GREEN_LOW"])
+            # for x in self.song_keys:
+            #     self.send_lp_note(x, self.colors["GREEN_LOW"])
             for x in range(0, self.notes_keys_col):
                 for y in range(0, 8):
                     if self.is_note_keys(x, y):
                         n = y * 16 + x
                         col = self.colors["AMBER"] if y % 2 == 0 else self.colors["YELLOW"]
                         self.send_lp_note(n, col)
+
+        elif current_mode == 1:
+            for x in range(0, self.drum_keys_col):
+                for y in range(1, 8):
+                    n = y * 16 + x
+                    # TODO: drum mapping and assign only mapped
+                    self.send_lp_note(n, self.colors["YELLOW"])
+
         elif current_mode == 2:
             debug('init_layout for mode 2...')

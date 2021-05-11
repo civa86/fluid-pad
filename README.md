@@ -1,5 +1,7 @@
 # Fluid Pad
 
+FluidSynth + Novation Launchpad MK1
+
 ## Development
 
 Install `nodemon` globally

@@ -1,7 +1,10 @@
 # TODO
 
-- blink notes while sound is playing
-- find a better name for the project
-- implement drums
-- implement mixer with volume, revervb and chorsu settings
+
+- refactor file and use std logger (no utils log...)
+- songs and loops
+     - uncomment code
+     - blink notes while sound is playing
+
+- implement (mode 2)mixer with volume, revervb and chorus settings
 - debug on raspi
