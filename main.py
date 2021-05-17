@@ -32,24 +32,24 @@ DRUMS_DATA = {
     "KITS": [5],
     "KIT": 0
 }
-# SONGS = [
-#     {
-#         8: "resources/midi/sw.mid",
-#         24: "resources/midi/stangata.mid",
-#         40: "resources/midi/jammin.mid",
-#         56: "resources/midi/simpson.mid",
-#         72: "resources/midi/rollem.mid",
-#     },
-#     {
-#         8: "resources/midi/loop1.mid",
-#         24: "resources/midi/loop2.mid",
-#         40: "resources/midi/loop3.mid"
-#     }
-# ]
+SONGS = [
+    {
+        8: "resources/midi/sw.mid",
+        24: "resources/midi/stangata.mid",
+        40: "resources/midi/jammin.mid",
+        56: "resources/midi/simpson.mid",
+        72: "resources/midi/rollem.mid",
+    },
+    {
+        8: "resources/midi/loop1.mid",
+        24: "resources/midi/loop2.mid",
+        40: "resources/midi/loop3.mid"
+    }
+]
 # ----------------------------------------------------------------------------------------------------------------------
 # APPLICATION STATE
 # ----------------------------------------------------------------------------------------------------------------------
-mode = 1
+mode = 0
 octave = 2
 ctrl = None
 song_playing = None
@@ -240,17 +240,17 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                         if ctrl.is_note_keys(btn_col, btn_row):
                             send_note_coords(message, btn_col, btn_row)
                     # SONGS
-                    # if message.note in ctrl.song_keys and message.velocity == 127:
-                    #     song = SONGS[mode].get(message.note, None)
-                    #     if song and song_playing is None:
-                    #         start_playing_song(song, message)
-                    #     else:
-                    #         if song != song_playing:
-                    #             song_playing = None
-                    #             time.sleep(0.5)
-                    #             start_playing_song(song, message)
-                    #         else:
-                    #             song_playing = None
+                    if message.note in ctrl.song_keys and message.velocity == 127:
+                        song = SONGS[mode].get(message.note, None)
+                        if song and song_playing is None:
+                            start_playing_song(song, message)
+                        else:
+                            if song != song_playing:
+                                song_playing = None
+                                time.sleep(0.5)
+                                start_playing_song(song, message)
+                            else:
+                                song_playing = None
             elif mode == 1:
                 # DRUMS NAVIGATOR
                 if message.type == 'note_on':

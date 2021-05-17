@@ -47,7 +47,6 @@ class MidiController:
 
     def reset_layout(self):
         self.send_lp_cc(0, 0)
-        # TODO: set mode to XY to be sure is not in drum mode....
 
     def setup_octaves(self, octave):
         for x in self.octave_keys:
@@ -89,8 +88,8 @@ class MidiController:
 
         if current_mode == 0:
             self.setup_octaves(octave)
-            # for x in self.song_keys:
-            #     self.send_lp_note(x, self.colors["GREEN_LOW"])
+            for x in self.song_keys:
+                self.send_lp_note(x, self.colors["GREEN_LOW"])
             for x in range(0, self.notes_keys_col):
                 for y in range(0, 8):
                     if self.is_note_keys(x, y):
