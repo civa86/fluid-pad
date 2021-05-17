@@ -47,7 +47,6 @@ class MidiController:
 
     def reset_layout(self):
         self.send_lp_cc(0, 0)
-        # TODO: set mode to XY to be sure is not in drum mode....
 
     def setup_octaves(self, octave):
         for x in self.octave_keys:
@@ -83,27 +82,22 @@ class MidiController:
         btn_row = int(midi_note / 16)
         return btn_col, btn_row
 
-    def init_layout(self, current_mode, octave):
+    def init_instrument_layout(self, octave):
         self.reset_layout()
-        self.send_lp_cc(self.mode_keys[current_mode], self.colors["AMBER"])
-
-        if current_mode == 0:
-            self.setup_octaves(octave)
-            # for x in self.song_keys:
-            #     self.send_lp_note(x, self.colors["GREEN_LOW"])
-            for x in range(0, self.notes_keys_col):
-                for y in range(0, 8):
-                    if self.is_note_keys(x, y):
-                        n = y * 16 + x
-                        col = self.colors["AMBER"] if y % 2 == 0 else self.colors["YELLOW"]
-                        self.send_lp_note(n, col)
-
-        elif current_mode == 1:
-            for x in range(1, self.drum_keys_col):
-                for y in range(1, 8):
+        self.send_lp_cc(self.mode_keys[0], self.colors["AMBER"])
+        self.setup_octaves(octave)
+        for x in range(0, self.notes_keys_col):
+            for y in range(0, 8):
+                if self.is_note_keys(x, y):
                     n = y * 16 + x
-                    if DRUM_MAP_KEYS[5][y][x] != 0:
-                        self.send_lp_note(n, self.colors["AMBER"])
+                    col = self.colors["AMBER"] if y % 2 == 0 else self.colors["YELLOW"]
+                    self.send_lp_note(n, col)
 
-        elif current_mode == 2:
-            debug('init_layout for mode 2...')
+    def init_drums_layout(self, kit):
+        self.reset_layout()
+        self.send_lp_cc(self.mode_keys[1], self.colors["AMBER"])
+        for x in range(1, self.drum_keys_col):
+            for y in range(1, 8):
+                n = y * 16 + x
+                if DRUM_MAP_KEYS[kit][y][x] != 0:
+                    self.send_lp_note(n, self.colors["AMBER"])

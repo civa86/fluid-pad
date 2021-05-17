@@ -29,37 +29,21 @@ INSTRUMENT_DATA = {
 }
 DRUMS_DATA = {
     "BANK": 128,
-    "KITS": [5],
+    "KITS": [2, 5],
     "KIT": 0
 }
-# SONGS = [
-#     {
-#         8: "resources/midi/sw.mid",
-#         24: "resources/midi/stangata.mid",
-#         40: "resources/midi/jammin.mid",
-#         56: "resources/midi/simpson.mid",
-#         72: "resources/midi/rollem.mid",
-#     },
-#     {
-#         8: "resources/midi/loop1.mid",
-#         24: "resources/midi/loop2.mid",
-#         40: "resources/midi/loop3.mid"
-#     }
-# ]
 # ----------------------------------------------------------------------------------------------------------------------
 # APPLICATION STATE
 # ----------------------------------------------------------------------------------------------------------------------
-mode = 1
+mode = 0
 octave = 2
 ctrl = None
-song_playing = None
 # ----------------------------------------------------------------------------------------------------------------------
 # FUNCTIONS
 # ----------------------------------------------------------------------------------------------------------------------
 
 
 def device_listener():
-    global song_playing
     device_initialized = False
     while 1:
         if DEVICE_PORT_NAME in mido.get_input_names():
@@ -67,7 +51,6 @@ def device_listener():
                 init()
                 device_initialized = True
         else:
-            song_playing = None
             device_initialized = False
         time.sleep(1)
 
@@ -105,10 +88,11 @@ def send_note_str(message, note_str):
 
 def init():
     debug('init mode', mode)
-    ctrl.init_layout(mode, octave)
     if mode == 0:
+        ctrl.init_instrument_layout(octave)
         update_instrument()
     elif mode == 1:
+        ctrl.init_drums_layout(get_drum_current_kit())
         update_drums(DRUMS_DATA['KIT'])
 
 
@@ -116,11 +100,18 @@ def get_drum_keys():
     return range(0, len(DRUMS_DATA['KITS']))
 
 
+def get_drum_current_kit():
+    return DRUMS_DATA["KITS"][DRUMS_DATA["KIT"]]
+
+
 def update_drums(kit):
     if kit != DRUMS_DATA['KIT']:
         DRUMS_DATA['KIT'] = kit
-    debug("set drum", 'bank', DRUMS_DATA["BANK"], 'kit', DRUMS_DATA["KITS"][DRUMS_DATA["KIT"]])
-    synth.set_instrument(DRUMS_DATA["BANK"], DRUMS_DATA["KITS"][DRUMS_DATA["KIT"]])
+        ctrl.init_drums_layout(get_drum_current_kit())
+
+    drum_current_kit = get_drum_current_kit()
+    debug("set drum", 'bank', DRUMS_DATA["BANK"], 'kit', drum_current_kit)
+    synth.set_instrument(DRUMS_DATA["BANK"], drum_current_kit)
     ctrl.setup_drum_navigator(DRUMS_DATA["KIT"], get_drum_keys())
 
 
@@ -135,45 +126,6 @@ def update_instrument(increment=0):
     debug("set instrument", 'bank', INSTRUMENT_DATA["BANK"], 'instrument', INSTRUMENT_DATA["INSTRUMENT"])
     synth.set_instrument(INSTRUMENT_DATA["BANK"], INSTRUMENT_DATA["INSTRUMENT"])
     ctrl.setup_instrument_navigator(INSTRUMENT_DATA["INSTRUMENT"], INSTRUMENT_DATA["INSTRUMENT_MIN"], INSTRUMENT_DATA["INSTRUMENT_MAX"])
-
-
-def play_midi_song(song):
-    global song_playing
-    last_note = None
-    if song_playing is None:
-        song_playing = song
-        for msg in mido.MidiFile(song).play():
-            if song_playing is not None:
-                if msg.type == 'note_on':
-                    synth.play_midi(msg.note, msg.velocity)
-            else:
-                synth.stop_all()
-                break
-        song_playing = None
-
-
-def playing_key(key):
-    global song_playing
-    col = 0
-    while 1:
-        if song_playing is not None:
-            if col == 0:
-                ctrl.send_lp_note(key, ctrl.colors["GREEN"])
-                col = 1
-            else:
-                ctrl.send_lp_note(key, ctrl.colors["GREEN_LOW"])
-                col = 0
-            time.sleep(0.5)
-        else:
-            ctrl.send_lp_note(key, ctrl.colors["GREEN_LOW"])
-            break
-
-
-def start_playing_song(song, message):
-    play_midi_song_thread = threading.Thread(target=play_midi_song, args=[song])
-    play_midi_song_thread.start()
-    playing_key_thread = threading.Thread(target=playing_key, args=[message.note])
-    playing_key_thread.start()
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -212,13 +164,10 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                 if new_mode != mode:
                     mode = new_mode
                     init()
-                    # TODO: manage instrument....
 
+            # INSTRUMENT MODE
             if mode == 0:
                 if message.type == 'control_change' and message.value == 127:
-                    if song_playing is not None:
-                        song_playing = None
-
                     # INSTRUMENT NAVIGATOR
                     if message.control == ctrl.next_instrument_key:
                         update_instrument(1)
@@ -230,35 +179,22 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                         update_instrument(-10)
 
                 if message.type == 'note_on':
-                    if song_playing is None:
-                        btn_col, btn_row = ctrl.get_button_coordinates(message.note)
-                        # OCTAVE
-                        if message.note in ctrl.octave_keys:
-                            octave = btn_row
-                            ctrl.setup_octaves(octave)
-                        # NOTES
-                        if ctrl.is_note_keys(btn_col, btn_row):
-                            send_note_coords(message, btn_col, btn_row)
-                    # SONGS
-                    # if message.note in ctrl.song_keys and message.velocity == 127:
-                    #     song = SONGS[mode].get(message.note, None)
-                    #     if song and song_playing is None:
-                    #         start_playing_song(song, message)
-                    #     else:
-                    #         if song != song_playing:
-                    #             song_playing = None
-                    #             time.sleep(0.5)
-                    #             start_playing_song(song, message)
-                    #         else:
-                    #             song_playing = None
+                    btn_col, btn_row = ctrl.get_button_coordinates(message.note)
+                    # OCTAVE
+                    if message.note in ctrl.octave_keys:
+                        octave = btn_row
+                        ctrl.setup_octaves(octave)
+                    # NOTES
+                    if ctrl.is_note_keys(btn_col, btn_row):
+                        send_note_coords(message, btn_col, btn_row)
+            # DRUMS MODE
             elif mode == 1:
-                # DRUMS NAVIGATOR
                 if message.type == 'note_on':
-                    if song_playing is None:
-                        if message.note in get_drum_keys():  # TODO: move to ctrl??
-                            update_drums(message.note)
-                        else:
-                            btn_col, btn_row = ctrl.get_button_coordinates(message.note)
-                            current_kit = DRUMS_DATA["KITS"][DRUMS_DATA["KIT"]]
-                            if DRUM_MAP_KEYS[current_kit][btn_row][btn_col] != 0:
-                                send_note_str(message, DRUM_MAP_KEYS[current_kit][btn_row][btn_col])
+                    btn_col, btn_row = ctrl.get_button_coordinates(message.note)
+                    current_drum_kit = get_drum_current_kit()
+                    # KITS
+                    if message.note in get_drum_keys():  # TODO: move to ctrl??
+                        update_drums(message.note)
+                    # NOTES
+                    if DRUM_MAP_KEYS[current_drum_kit][btn_row][btn_col] != 0:
+                        send_note_str(message, DRUM_MAP_KEYS[current_drum_kit][btn_row][btn_col])
