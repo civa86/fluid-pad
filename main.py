@@ -10,6 +10,8 @@ from utils.log import set_log_level, debug
 import utils.synth as synth
 from utils.midi import MidiController
 
+from drums import DRUM_MAP_KEYS
+
 # ----------------------------------------------------------------------------------------------------------------------
 # CONSTANTS
 # ----------------------------------------------------------------------------------------------------------------------
@@ -27,7 +29,7 @@ INSTRUMENT_DATA = {
 }
 DRUMS_DATA = {
     "BANK": 128,
-    "KITS": [2, 4, 5],
+    "KITS": [5],
     "KIT": 0
 }
 # SONGS = [
@@ -77,7 +79,7 @@ def end_process_handler(signal, frame):
     sys.exit(0)
 
 
-def send_note(message, x, y):
+def send_note_coords(message, x, y):
     n = NOTES_MATRIX[y % 2][x]
     o = int(message.note / 32) + octave
     if message.velocity == 127:
@@ -87,6 +89,18 @@ def send_note(message, x, y):
     else:
         ctrl.send_lp_note(message.note, ctrl.colors["YELLOW"] if btn_row % 2 != 0 else ctrl.colors["AMBER"])
         synth.stop(n, o)
+
+
+def send_note_str(message, note_str):
+    note_info = note_str.split('-')
+    if message.velocity == 127:
+        debug('Play Note', note_str)
+        ctrl.send_lp_note(message.note, ctrl.colors["GREEN"])
+        synth.play(note_info[0], int(note_info[1]))
+    else:
+        debug('Stop Note', note_str)
+        ctrl.send_lp_note(message.note, ctrl.colors["AMBER"])
+        synth.stop(note_info[0], int(note_info[1]))
 
 
 def init():
@@ -217,15 +231,14 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
 
                 if message.type == 'note_on':
                     if song_playing is None:
-                        btn_col = message.note % 16
-                        btn_row = int(message.note / 16)
+                        btn_col, btn_row = ctrl.get_button_coordinates(message.note)
                         # OCTAVE
                         if message.note in ctrl.octave_keys:
                             octave = btn_row
                             ctrl.setup_octaves(octave)
                         # NOTES
                         if ctrl.is_note_keys(btn_col, btn_row):
-                            send_note(message, btn_col, btn_row)
+                            send_note_coords(message, btn_col, btn_row)
                     # SONGS
                     # if message.note in ctrl.song_keys and message.velocity == 127:
                     #     song = SONGS[mode].get(message.note, None)
@@ -242,5 +255,10 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                 # DRUMS NAVIGATOR
                 if message.type == 'note_on':
                     if song_playing is None:
-                        if message.note in get_drum_keys():
+                        if message.note in get_drum_keys():  # TODO: move to ctrl??
                             update_drums(message.note)
+                        else:
+                            btn_col, btn_row = ctrl.get_button_coordinates(message.note)
+                            current_kit = DRUMS_DATA["KITS"][DRUMS_DATA["KIT"]]
+                            if DRUM_MAP_KEYS[current_kit][btn_row][btn_col] != 0:
+                                send_note_str(message, DRUM_MAP_KEYS[current_kit][btn_row][btn_col])

@@ -2,6 +2,8 @@ import mido
 
 from utils.log import debug
 
+from drums import DRUM_MAP_KEYS
+
 
 class MidiController:
     colors = {
@@ -76,6 +78,11 @@ class MidiController:
     def is_note_keys(self, x, y):
         return x < self.notes_keys_col and (y % 2 != 0 or not x in self.semi_notes_void_col)
 
+    def get_button_coordinates(self, midi_note):
+        btn_col = midi_note % 16
+        btn_row = int(midi_note / 16)
+        return btn_col, btn_row
+
     def init_layout(self, current_mode, octave):
         self.reset_layout()
         self.send_lp_cc(self.mode_keys[current_mode], self.colors["AMBER"])
@@ -92,11 +99,11 @@ class MidiController:
                         self.send_lp_note(n, col)
 
         elif current_mode == 1:
-            for x in range(0, self.drum_keys_col):
+            for x in range(1, self.drum_keys_col):
                 for y in range(1, 8):
                     n = y * 16 + x
-                    # TODO: drum mapping and assign only mapped
-                    self.send_lp_note(n, self.colors["YELLOW"])
+                    if DRUM_MAP_KEYS[5][y][x] != 0:
+                        self.send_lp_note(n, self.colors["AMBER"])
 
         elif current_mode == 2:
             debug('init_layout for mode 2...')
