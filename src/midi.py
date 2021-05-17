@@ -1,8 +1,5 @@
 import mido
-
-from utils.log import debug
-
-from drums import DRUM_MAP_KEYS
+from src.const import DRUMS_DATA
 
 
 class MidiController:
@@ -99,5 +96,5 @@ class MidiController:
         for x in range(1, self.drum_keys_col):
             for y in range(1, 8):
                 n = y * 16 + x
-                if DRUM_MAP_KEYS[kit][y][x] != 0:
+                if DRUMS_DATA['MAPPING'][kit][y][x] != 0:
                     self.send_lp_note(n, self.colors["AMBER"])

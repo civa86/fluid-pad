@@ -1,4 +1,5 @@
 autopep8==1.5.4
+future-fstrings==1.2.0
 mido==1.2.9
 mingus==0.6.1
 pycodestyle==2.6.0

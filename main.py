@@ -3,41 +3,19 @@ import os
 import signal
 import time
 import threading
-
 import mido
+import logging
+import src.synth as synth
+from src.midi import MidiController
+from src.const import DEVICE_PORT_NAME, SF2, NOTES_MATRIX, INSTRUMENT_DATA, DRUMS_DATA
 
-from utils.log import set_log_level, debug
-import utils.synth as synth
-from utils.midi import MidiController
 
-from drums import DRUM_MAP_KEYS
-
-# ----------------------------------------------------------------------------------------------------------------------
-# CONSTANTS
-# ----------------------------------------------------------------------------------------------------------------------
-DEVICE_PORT_NAME = "Launchpad"
-SF2 = "resources/sf2/VintageDreamsWaves-v2.sf2"
-NOTES_MATRIX = [
-    [None, 'C#', 'D#', None, 'F#', 'G#', 'A#'],
-    ['C', 'D', 'E', 'F', 'G', 'A', 'B']
-]
-INSTRUMENT_DATA = {
-    "BANK": 0,
-    "INSTRUMENT_MIN": 0,
-    "INSTRUMENT_MAX": 127,
-    "INSTRUMENT": 0
-}
-DRUMS_DATA = {
-    "BANK": 128,
-    "KITS": [2, 5],
-    "KIT": 0
-}
-# ----------------------------------------------------------------------------------------------------------------------
-# APPLICATION STATE
-# ----------------------------------------------------------------------------------------------------------------------
 mode = 0
 octave = 2
 ctrl = None
+
+logger = logging.getLogger(__name__)
+
 # ----------------------------------------------------------------------------------------------------------------------
 # FUNCTIONS
 # ----------------------------------------------------------------------------------------------------------------------
@@ -52,13 +30,14 @@ def device_listener():
                 device_initialized = True
         else:
             device_initialized = False
+            logger.debug(f'Wait for {DEVICE_PORT_NAME}')
         time.sleep(1)
 
 
 def end_process_handler(signal, frame):
     if ctrl is not None:
         ctrl.reset_layout()
-    debug('gracefully exiting')
+    logger.debug('gracefully exiting')
     sys.exit(0)
 
 
@@ -66,7 +45,7 @@ def send_note_coords(message, x, y):
     n = NOTES_MATRIX[y % 2][x]
     o = int(message.note / 32) + octave
     if message.velocity == 127:
-        debug('Play Note', n + '-' + str(o))
+        logger.debug(f'Play Note {n}-{str(o)}')
         ctrl.send_lp_note(message.note, ctrl.colors["GREEN"])
         synth.play(n, o)
     else:
@@ -77,17 +56,17 @@ def send_note_coords(message, x, y):
 def send_note_str(message, note_str):
     note_info = note_str.split('-')
     if message.velocity == 127:
-        debug('Play Note', note_str)
+        logger.debug(f'Play Note {note_str}')
         ctrl.send_lp_note(message.note, ctrl.colors["GREEN"])
         synth.play(note_info[0], int(note_info[1]))
     else:
-        debug('Stop Note', note_str)
+        logger.debug(f'Stop Note {note_str}')
         ctrl.send_lp_note(message.note, ctrl.colors["AMBER"])
         synth.stop(note_info[0], int(note_info[1]))
 
 
 def init():
-    debug('init mode', mode)
+    logger.debug(f'init mode {mode}')
     if mode == 0:
         ctrl.init_instrument_layout(octave)
         update_instrument()
@@ -110,7 +89,7 @@ def update_drums(kit):
         ctrl.init_drums_layout(get_drum_current_kit())
 
     drum_current_kit = get_drum_current_kit()
-    debug("set drum", 'bank', DRUMS_DATA["BANK"], 'kit', drum_current_kit)
+    logger.debug(f'Set drum: bank {DRUMS_DATA["BANK"]}, kit {drum_current_kit}')
     synth.set_instrument(DRUMS_DATA["BANK"], drum_current_kit)
     ctrl.setup_drum_navigator(DRUMS_DATA["KIT"], get_drum_keys())
 
@@ -123,7 +102,7 @@ def update_instrument(increment=0):
         new_instrument = INSTRUMENT_DATA["INSTRUMENT_MAX"]
 
     INSTRUMENT_DATA["INSTRUMENT"] = new_instrument
-    debug("set instrument", 'bank', INSTRUMENT_DATA["BANK"], 'instrument', INSTRUMENT_DATA["INSTRUMENT"])
+    logger.debug(f'Set instrument: bank {INSTRUMENT_DATA["BANK"]}, instrument {INSTRUMENT_DATA["INSTRUMENT"]}')
     synth.set_instrument(INSTRUMENT_DATA["BANK"], INSTRUMENT_DATA["INSTRUMENT"])
     ctrl.setup_instrument_navigator(INSTRUMENT_DATA["INSTRUMENT"], INSTRUMENT_DATA["INSTRUMENT_MIN"], INSTRUMENT_DATA["INSTRUMENT_MAX"])
 
@@ -132,7 +111,9 @@ def update_instrument(increment=0):
 # MAIN
 # ----------------------------------------------------------------------------------------------------------------------
 LOGLEVEL = os.environ.get('LOGLEVEL', 'INFO').upper()
-set_log_level(LOGLEVEL)
+logging.basicConfig(level=LOGLEVEL,
+                    format='[%(asctime)s][%(levelname)s] %(message)s',
+                    datefmt='%Y-%m-%d %H:%M')
 
 device_listener_thread = threading.Thread(target=device_listener)
 device_listener_thread.daemon = True
@@ -142,22 +123,21 @@ signal.signal(signal.SIGINT, end_process_handler)
 signal.signal(signal.SIGTERM, end_process_handler)
 
 while not DEVICE_PORT_NAME in mido.get_input_names():
-    debug('Wait for', DEVICE_PORT_NAME)
     time.sleep(2)
 
 with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
     with mido.open_input(DEVICE_PORT_NAME, autoreset=True) as input_port:
-        debug('OUTPUT PORT: {}'.format(output_port))
-        debug('INPUT PORT: {}'.format(input_port))
+        logger.debug(f'OUTPUT PORT: {output_port}')
+        logger.debug(f'INPUT PORT: {input_port}')
 
         synth.load_sf2(SF2)
         ctrl = MidiController(output_port)
         synth.volume()
 
-        debug('Waiting for midi messages..')
+        logger.debug('Waiting for midi messages..')
 
         for message in input_port:
-            debug('Received {}'.format(message))
+            logger.debug(f'Received {message}')
             # SWITCH MODES
             if message.type == 'control_change' and message.value == 127 and message.control in ctrl.mode_keys:
                 new_mode = ctrl.mode_keys.index(message.control)
@@ -196,5 +176,5 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                     if message.note in get_drum_keys():  # TODO: move to ctrl??
                         update_drums(message.note)
                     # NOTES
-                    if DRUM_MAP_KEYS[current_drum_kit][btn_row][btn_col] != 0:
-                        send_note_str(message, DRUM_MAP_KEYS[current_drum_kit][btn_row][btn_col])
+                    if DRUMS_DATA["MAPPING"][current_drum_kit][btn_row][btn_col] != 0:
+                        send_note_str(message, DRUMS_DATA["MAPPING"][current_drum_kit][btn_row][btn_col])
