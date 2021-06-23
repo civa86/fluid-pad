@@ -2,16 +2,15 @@
 
 FluidSynth + Novation Launchpad MK1
 
+## Requirements
+
+- Python ^3.8
+- Poetry ^1.1.6
+
 ## Development
 
-Install `nodemon` globally
-
 ```bash
-npm i -g nodemon
-```
-
-Run nodemon with main script
-
-```bash
-LOGLEVEL=DEBUG  nodemon --exec python main.py
+poetry install
+poetry shell
+poetry run dev
 ```
