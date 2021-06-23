@@ -18,6 +18,7 @@ autopep8 = "^1.5.7"
 
 [tool.autopep8]
 max_line_length = 120
+indent_size = 2
 aggressive = 3
 recursive = true
 
