@@ -5,9 +5,9 @@ import time
 import threading
 import mido
 import logging
-import src.synth as synth
-from src.midi import MidiController
-from src.const import DEVICE_PORT_NAME, SF2, NOTES_MATRIX, INSTRUMENT_DATA, DRUMS_DATA
+import fluid_pad.synth as synth
+from fluid_pad.midi import MidiController
+from fluid_pad.const import DEVICE_PORT_NAME, SF2, NOTES_MATRIX, INSTRUMENT_DATA, DRUMS_DATA
 
 
 mode = 0
@@ -23,9 +23,9 @@ logger = logging.getLogger(__name__)
 
 def device_listener():
     device_initialized = False
-    while 1:
+    while True:
         if DEVICE_PORT_NAME in mido.get_input_names():
-            if device_initialized == False and not ctrl is None:
+            if device_initialized == False and ctrl is not None:
                 init()
                 device_initialized = True
         else:
@@ -49,7 +49,8 @@ def send_note_coords(message, x, y):
         ctrl.send_lp_note(message.note, ctrl.colors["GREEN"])
         synth.play(n, o)
     else:
-        ctrl.send_lp_note(message.note, ctrl.colors["YELLOW"] if btn_row % 2 != 0 else ctrl.colors["AMBER"])
+        ctrl.send_lp_note(
+            message.note, ctrl.colors["YELLOW"] if btn_row % 2 != 0 else ctrl.colors["AMBER"])
         synth.stop(n, o)
 
 
@@ -89,7 +90,8 @@ def update_drums(kit):
         ctrl.init_drums_layout(get_drum_current_kit())
 
     drum_current_kit = get_drum_current_kit()
-    logger.debug(f'Set drum: bank {DRUMS_DATA["BANK"]}, kit {drum_current_kit}')
+    logger.debug(
+        f'Set drum: bank {DRUMS_DATA["BANK"]}, kit {drum_current_kit}')
     synth.set_instrument(DRUMS_DATA["BANK"], drum_current_kit)
     ctrl.setup_drum_navigator(DRUMS_DATA["KIT"], get_drum_keys())
 
@@ -102,9 +104,12 @@ def update_instrument(increment=0):
         new_instrument = INSTRUMENT_DATA["INSTRUMENT_MAX"]
 
     INSTRUMENT_DATA["INSTRUMENT"] = new_instrument
-    logger.debug(f'Set instrument: bank {INSTRUMENT_DATA["BANK"]}, instrument {INSTRUMENT_DATA["INSTRUMENT"]}')
-    synth.set_instrument(INSTRUMENT_DATA["BANK"], INSTRUMENT_DATA["INSTRUMENT"])
-    ctrl.setup_instrument_navigator(INSTRUMENT_DATA["INSTRUMENT"], INSTRUMENT_DATA["INSTRUMENT_MIN"], INSTRUMENT_DATA["INSTRUMENT_MAX"])
+    logger.debug(
+        f'Set instrument: bank {INSTRUMENT_DATA["BANK"]}, instrument {INSTRUMENT_DATA["INSTRUMENT"]}')
+    synth.set_instrument(
+        INSTRUMENT_DATA["BANK"], INSTRUMENT_DATA["INSTRUMENT"])
+    ctrl.setup_instrument_navigator(
+        INSTRUMENT_DATA["INSTRUMENT"], INSTRUMENT_DATA["INSTRUMENT_MIN"], INSTRUMENT_DATA["INSTRUMENT_MAX"])
 
 
 # ----------------------------------------------------------------------------------------------------------------------
@@ -122,7 +127,7 @@ device_listener_thread.start()
 signal.signal(signal.SIGINT, end_process_handler)
 signal.signal(signal.SIGTERM, end_process_handler)
 
-while not DEVICE_PORT_NAME in mido.get_input_names():
+while DEVICE_PORT_NAME not in mido.get_input_names():
     time.sleep(2)
 
 with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
@@ -159,7 +164,8 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
                         update_instrument(-10)
 
                 if message.type == 'note_on':
-                    btn_col, btn_row = ctrl.get_button_coordinates(message.note)
+                    btn_col, btn_row = ctrl.get_button_coordinates(
+                        message.note)
                     # OCTAVE
                     if message.note in ctrl.octave_keys:
                         octave = btn_row
@@ -170,11 +176,13 @@ with mido.open_output(DEVICE_PORT_NAME, autoreset=True) as output_port:
             # DRUMS MODE
             elif mode == 1:
                 if message.type == 'note_on':
-                    btn_col, btn_row = ctrl.get_button_coordinates(message.note)
+                    btn_col, btn_row = ctrl.get_button_coordinates(
+                        message.note)
                     current_drum_kit = get_drum_current_kit()
                     # KITS
                     if message.note in get_drum_keys():  # TODO: move to ctrl??
                         update_drums(message.note)
                     # NOTES
                     if DRUMS_DATA["MAPPING"][current_drum_kit][btn_row][btn_col] != 0:
-                        send_note_str(message, DRUMS_DATA["MAPPING"][current_drum_kit][btn_row][btn_col])
+                        send_note_str(
+                            message, DRUMS_DATA["MAPPING"][current_drum_kit][btn_row][btn_col])

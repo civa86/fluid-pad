@@ -1,9 +1,0 @@
-autopep8==1.5.4
-future-fstrings==1.2.0
-mido==1.2.9
-mingus==0.6.1
-pycodestyle==2.6.0
-python-rtmidi==1.4.6
-rtmidi==2.3.4
-six==1.15.0
-toml==0.10.2

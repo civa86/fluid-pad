@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "fluid-pad"
+version = "0.1.0"
+description = ""
+authors = ["Dario Civallero <d.civallero@reply.it>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+future-fstrings = "^1.2.0"
+mido = "^1.2.10"
+mingus = "^0.6.1"
+rtmidi = "^2.3.4"
+python-rtmidi = "^1.4.9"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+autopep8 = "^1.5.7"
+
+[tool.autopep8]
+max_line_length = 120
+aggressive = 3
+recursive = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

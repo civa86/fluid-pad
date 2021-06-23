@@ -1,5 +1,5 @@
 import mido
-from src.const import DRUMS_DATA
+from fluid_pad.const import DRUMS_DATA
 
 
 class MidiController:
@@ -72,7 +72,7 @@ class MidiController:
             self.send_lp_note(x, current_color)
 
     def is_note_keys(self, x, y):
-        return x < self.notes_keys_col and (y % 2 != 0 or not x in self.semi_notes_void_col)
+        return x < self.notes_keys_col and (y % 2 != 0 or x not in self.semi_notes_void_col)
 
     def get_button_coordinates(self, midi_note):
         btn_col = midi_note % 16
