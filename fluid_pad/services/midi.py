@@ -2,7 +2,7 @@ import mido
 from fluid_pad.const import DRUMS_DATA
 
 
-class MidiController:
+class MidiService:
   colors = {
       "GREEN": 60,
       "GREEN_LOW": 28,

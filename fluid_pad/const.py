@@ -11,9 +11,6 @@
 #         }
 #     }
 # ]
-DEVICE_PORT_NAME = "Launchpad"
-
-SF2 = "resources/sf2/VintageDreamsWaves-v2.sf2"
 
 NOTES_MATRIX = [
     [None, 'C#', 'D#', None, 'F#', 'G#', 'A#'],

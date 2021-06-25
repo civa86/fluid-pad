@@ -9,7 +9,6 @@ python = "^3.8"
 future-fstrings = "^1.2.0"
 mido = "^1.2.10"
 mingus = "^0.6.1"
-rtmidi = "^2.3.4"
 python-rtmidi = "^1.4.9"
 
 [tool.poetry.dev-dependencies]
