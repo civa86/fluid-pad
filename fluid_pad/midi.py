@@ -26,10 +26,12 @@ class MidiController:
   mode_keys = [109, 110, 111]
   song_keys = [8, 24, 40, 56, 72, 88, 104, 120]
 
+  drum_keys = None
   drum_keys_col = 8
 
   def __init__(self, port):
     self.port = port
+    self.drum_keys = range(0, len(DRUMS_DATA['KITS']))
 
   def set_port(self, port):
     self.port = port
@@ -66,8 +68,8 @@ class MidiController:
       self.send_lp_cc(self.next_instrument_key, self.colors["GREEN_LOW"])
       self.send_lp_cc(self.next_10_instruments_key, self.colors["GREEN_LOW"])
 
-  def setup_drum_navigator(self, current, keys):
-    for x in keys:
+  def setup_drum_navigator(self, current):
+    for x in self.drum_keys:
       current_color = self.colors["RED"] if x == current else self.colors["RED_LOW"]
       self.send_lp_note(x, current_color)
 

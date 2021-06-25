@@ -17,10 +17,11 @@ class Controller:
   mode = 0
   octave = 2
   midi_controller = None
+  sounf_font_path = None
 
-  def get_sound_font_path(self):
+  def __init__(self):
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    return os.path.join(current_dir, SF2)
+    self.sounf_font_path = os.path.join(current_dir, SF2)
 
   def device_listener(self):
     device_initialized = False
@@ -72,9 +73,6 @@ class Controller:
       self.midi_controller.init_drums_layout(self.get_drum_current_kit())
       self.update_drums(DRUMS_DATA['KIT'])
 
-  def get_drum_keys(self):
-    return range(0, len(DRUMS_DATA['KITS']))
-
   def get_drum_current_kit(self):
     return DRUMS_DATA["KITS"][DRUMS_DATA["KIT"]]
 
@@ -87,7 +85,7 @@ class Controller:
     logger.debug(
         f'Set drum: bank {DRUMS_DATA["BANK"]}, kit {drum_current_kit}')
     synth.set_instrument(DRUMS_DATA["BANK"], drum_current_kit)
-    self.midi_controller.setup_drum_navigator(DRUMS_DATA["KIT"], self.get_drum_keys())
+    self.midi_controller.setup_drum_navigator(DRUMS_DATA["KIT"])
 
   def update_instrument(self, increment=0):
     new_instrument = INSTRUMENT_DATA["INSTRUMENT"] + increment
@@ -120,7 +118,7 @@ class Controller:
         logger.debug(f'OUTPUT PORT: {output_port}')
         logger.debug(f'INPUT PORT: {input_port}')
 
-        synth.load_sf2(self.get_sound_font_path())
+        synth.load_sf2(self.sounf_font_path)
         self.midi_controller = MidiController(output_port)
         synth.volume()
 
@@ -165,7 +163,7 @@ class Controller:
                   message.note)
               current_drum_kit = self.get_drum_current_kit()
               # KITS
-              if message.note in self.get_drum_keys():
+              if message.note in self.midi_controller.drum_keys:
                 self.update_drums(message.note)
               # NOTES
               if DRUMS_DATA["MAPPING"][current_drum_kit][btn_row][btn_col] != 0:

@@ -20,6 +20,8 @@ NOTES_MATRIX = [
     ['C', 'D', 'E', 'F', 'G', 'A', 'B']
 ]
 
+# TODO: REFACTOR WITH CLASSES??
+
 INSTRUMENT_DATA = {
     "BANK": 0,
     "INSTRUMENT_MIN": 0,
