@@ -17,11 +17,11 @@ class Controller:
   mode = 0
   octave = 2
   midi_controller = None
-  sounf_font_path = None
+  sound_font_path = None
 
   def __init__(self):
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    self.sounf_font_path = os.path.join(current_dir, SF2)
+    self.sound_font_path = os.path.join(current_dir, SF2)
 
   def device_listener(self):
     device_initialized = False
@@ -118,7 +118,7 @@ class Controller:
         logger.debug(f'OUTPUT PORT: {output_port}')
         logger.debug(f'INPUT PORT: {input_port}')
 
-        synth.load_sf2(self.sounf_font_path)
+        synth.load_sf2(self.sound_font_path)
         self.midi_controller = MidiController(output_port)
         synth.volume()
 
