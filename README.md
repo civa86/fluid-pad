@@ -12,5 +12,5 @@ FluidSynth + Novation Launchpad MK1
 ```bash
 poetry install
 poetry shell
-poetry run dev
+poetry run develop
 ```

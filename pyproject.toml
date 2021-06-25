@@ -24,7 +24,7 @@ aggressive = 3
 recursive = true
 
 [tool.poetry.scripts]
-dev = 'scripts:develop'
+develop = 'scripts:develop'
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
