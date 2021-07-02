@@ -9,9 +9,8 @@ import mido
 # services
 from fluid_pad.services.synth import SynthService
 from fluid_pad.services.midi import MidiService
+from fluid_pad.services.instrument import InstrumentService
 from fluid_pad.services.drums import DrumsService
-
-from fluid_pad.const import NOTES_MATRIX, INSTRUMENT_DATA
 
 logger = logging.getLogger(__name__)
 
@@ -23,12 +22,14 @@ class MainController:
   device_port_name = None
   midi_service = None
   synth_service = None
+  instrument_service = None
   drum_service = None
 
   def __init__(self, sound_font_path, device_port_name):
     self.sound_font_path = sound_font_path
     self.device_port_name = device_port_name
     self.synth_service = SynthService()
+    self.instrument_service = InstrumentService()
     self.drum_service = DrumsService()
 
   def device_listener(self):
@@ -50,7 +51,8 @@ class MainController:
     sys.exit(0)
 
   def send_note_coords(self, message, x, y):
-    n = NOTES_MATRIX[y % 2][x]
+    notes_matrix = self.instrument_service.get_notes_matrix()
+    n = notes_matrix[y % 2][x]
     o = int(message.note / 32) + self.octave
     if message.velocity == 127:
       logger.debug(f'Play Note {n}-{str(o)}')
@@ -93,19 +95,16 @@ class MainController:
     self.midi_service.setup_drum_navigator(self.drum_service.get_current_kit_index())
 
   def update_instrument(self, increment=0):
-    new_instrument = INSTRUMENT_DATA["INSTRUMENT"] + increment
-    if new_instrument < INSTRUMENT_DATA["INSTRUMENT_MIN"]:
-      new_instrument = INSTRUMENT_DATA["INSTRUMENT_MIN"]
-    if new_instrument > INSTRUMENT_DATA["INSTRUMENT_MAX"]:
-      new_instrument = INSTRUMENT_DATA["INSTRUMENT_MAX"]
+    self.instrument_service.set_new_instrument(increment)
+    instrument_bank = self.instrument_service.get_bank()
+    instrument_current = self.instrument_service.get_current()
 
-    INSTRUMENT_DATA["INSTRUMENT"] = new_instrument
-    logger.debug(f'Set instrument: bank {INSTRUMENT_DATA["BANK"]}, instrument {INSTRUMENT_DATA["INSTRUMENT"]}')
-    self.synth_service.set_instrument(INSTRUMENT_DATA["BANK"], INSTRUMENT_DATA["INSTRUMENT"])
+    logger.debug(f'Set instrument: bank {instrument_bank}, instrument {instrument_current}')
+    self.synth_service.set_instrument(instrument_bank, instrument_current)
     self.midi_service.setup_instrument_navigator(
-        INSTRUMENT_DATA["INSTRUMENT"],
-        INSTRUMENT_DATA["INSTRUMENT_MIN"],
-        INSTRUMENT_DATA["INSTRUMENT_MAX"])
+        instrument_current,
+        self.instrument_service.get_min_value(),
+        self.instrument_service.get_max_value())
 
   def run(self):
     device_listener_thread = threading.Thread(target=self.device_listener)
