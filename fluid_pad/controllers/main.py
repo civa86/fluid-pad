@@ -11,7 +11,7 @@ from fluid_pad.services.synth import SynthService
 from fluid_pad.services.midi import MidiService
 from fluid_pad.services.drums import DrumsService
 
-from fluid_pad.const import NOTES_MATRIX, INSTRUMENT_DATA, DRUMS_DATA
+from fluid_pad.const import NOTES_MATRIX, INSTRUMENT_DATA
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +23,13 @@ class MainController:
   device_port_name = None
   midi_service = None
   synth_service = None
+  drum_service = None
 
   def __init__(self, sound_font_path, device_port_name):
     self.sound_font_path = sound_font_path
     self.device_port_name = device_port_name
     self.synth_service = SynthService()
+    self.drum_service = DrumsService()
 
   def device_listener(self):
     device_initialized = False
@@ -76,22 +78,19 @@ class MainController:
       self.midi_service.init_instrument_layout(self.octave)
       self.update_instrument()
     elif self.mode == 1:
-      self.midi_service.init_drums_layout(self.get_drum_current_kit())
-      self.update_drums(DRUMS_DATA['KIT'])
+      self.midi_service.init_drums_layout(self.drum_service.get_current_kit())
+      self.update_drums(self.drum_service.get_current_kit())
 
-  def get_drum_current_kit(self):
-    return DRUMS_DATA["KITS"][DRUMS_DATA["KIT"]]
+  def update_drums(self, kit_index):
+    if kit_index != self.drum_service.get_current_kit():
+      self.drum_service.set_current_kit_index(kit_index)
+      self.midi_service.init_drums_layout(self.drum_service.get_current_kit())
 
-  def update_drums(self, kit):
-    if kit != DRUMS_DATA['KIT']:
-      DRUMS_DATA['KIT'] = kit
-      self.midi_service.init_drums_layout(self.get_drum_current_kit())
-
-    drum_current_kit = self.get_drum_current_kit()
-    logger.debug(
-        f'Set drum: bank {DRUMS_DATA["BANK"]}, kit {drum_current_kit}')
-    self.synth_service.set_instrument(DRUMS_DATA["BANK"], drum_current_kit)
-    self.midi_service.setup_drum_navigator(DRUMS_DATA["KIT"])
+    drum_current_kit = self.drum_service.get_current_kit()
+    drum_bank = self.drum_service.get_bank()
+    logger.debug(f'Set drum: bank {drum_bank}, kit {drum_current_kit}')
+    self.synth_service.set_instrument(drum_bank, drum_current_kit)
+    self.midi_service.setup_drum_navigator(self.drum_service.get_current_kit_index())
 
   def update_instrument(self, increment=0):
     new_instrument = INSTRUMENT_DATA["INSTRUMENT"] + increment
@@ -101,12 +100,12 @@ class MainController:
       new_instrument = INSTRUMENT_DATA["INSTRUMENT_MAX"]
 
     INSTRUMENT_DATA["INSTRUMENT"] = new_instrument
-    logger.debug(
-        f'Set instrument: bank {INSTRUMENT_DATA["BANK"]}, instrument {INSTRUMENT_DATA["INSTRUMENT"]}')
-    self.synth_service.set_instrument(
-        INSTRUMENT_DATA["BANK"], INSTRUMENT_DATA["INSTRUMENT"])
+    logger.debug(f'Set instrument: bank {INSTRUMENT_DATA["BANK"]}, instrument {INSTRUMENT_DATA["INSTRUMENT"]}')
+    self.synth_service.set_instrument(INSTRUMENT_DATA["BANK"], INSTRUMENT_DATA["INSTRUMENT"])
     self.midi_service.setup_instrument_navigator(
-        INSTRUMENT_DATA["INSTRUMENT"], INSTRUMENT_DATA["INSTRUMENT_MIN"], INSTRUMENT_DATA["INSTRUMENT_MAX"])
+        INSTRUMENT_DATA["INSTRUMENT"],
+        INSTRUMENT_DATA["INSTRUMENT_MIN"],
+        INSTRUMENT_DATA["INSTRUMENT_MAX"])
 
   def run(self):
     device_listener_thread = threading.Thread(target=self.device_listener)
@@ -165,13 +164,12 @@ class MainController:
           # DRUMS MODE
           elif self.mode == 1:
             if message.type == 'note_on':
-              btn_col, btn_row = self.midi_service.get_button_coordinates(
-                  message.note)
-              current_drum_kit = self.get_drum_current_kit()
+              btn_col, btn_row = self.midi_service.get_button_coordinates(message.note)
+              current_drum_mapping = self.drum_service.get_current_mapping()
               # KITS
               if message.note in self.midi_service.drum_keys:
                 self.update_drums(message.note)
               # NOTES
-              if DRUMS_DATA["MAPPING"][current_drum_kit][btn_row][btn_col] != 0:
+              if current_drum_mapping[btn_row][btn_col] != 0:
                 self.send_note_str(
-                    message, DRUMS_DATA["MAPPING"][current_drum_kit][btn_row][btn_col])
+                    message, current_drum_mapping[btn_row][btn_col])

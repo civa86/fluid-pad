@@ -1,5 +1,5 @@
 import mido
-from fluid_pad.const import DRUMS_DATA
+from fluid_pad.services.drums import DrumsService
 
 
 class MidiService:
@@ -26,12 +26,14 @@ class MidiService:
   mode_keys = [109, 110, 111]
   song_keys = [8, 24, 40, 56, 72, 88, 104, 120]
 
+  drum_service = None
   drum_keys = None
   drum_keys_col = 8
 
   def __init__(self, port):
+    self.drum_service = DrumsService()
     self.port = port
-    self.drum_keys = range(0, len(DRUMS_DATA['KITS']))
+    self.drum_keys = range(0, self.drum_service.get_number_of_kits())
 
   def set_port(self, port):
     self.port = port
@@ -98,5 +100,6 @@ class MidiService:
     for x in range(1, self.drum_keys_col):
       for y in range(1, 8):
         n = y * 16 + x
-        if DRUMS_DATA['MAPPING'][kit][y][x] != 0:
+        drum_mapping = self.drum_service.get_kit_mapping(kit)
+        if drum_mapping[y][x] != 0:
           self.send_lp_note(n, self.colors["AMBER"])
