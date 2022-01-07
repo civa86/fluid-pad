@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "fluid-pad"
+name = "fluid_pad"
 version = "0.1.0"
 description = ""
 authors = ["Dario Civallero <d.civallero@reply.it>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 future-fstrings = "^1.2.0"
 mido = "^1.2.10"
 mingus = "^0.6.1"

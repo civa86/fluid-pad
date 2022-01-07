@@ -35,7 +35,8 @@ class MainController:
   def device_listener(self):
     device_initialized = False
     while True:
-      if self.device_port_name in mido.get_input_names():
+      device_ports_in, device_ports_out = self.get_device_port()
+      if device_ports_in is not None and device_ports_out is not None:
         if device_initialized == False and self.midi_service is not None:
           self.init_mode()
           device_initialized = True
@@ -106,6 +107,19 @@ class MainController:
         self.instrument_service.get_min_value(),
         self.instrument_service.get_max_value())
 
+  def get_device_port(self):
+    result_input = None
+    result_output = None
+    # logger.debug(f'Searching Input {self.device_port_name} in {mido.get_input_names()}')
+    for input_name in mido.get_input_names():
+      if self.device_port_name in input_name:
+        result_input = input_name
+    # logger.debug(f'Searching Output {self.device_port_name} in {mido.get_output_names()}')
+    for output_name in mido.get_output_names():
+      if self.device_port_name in output_name:
+        result_output = input_name
+    return result_input, result_output
+
   def run(self):
     device_listener_thread = threading.Thread(target=self.device_listener)
     device_listener_thread.daemon = True
@@ -114,11 +128,13 @@ class MainController:
     signal.signal(signal.SIGINT, self.end_process_handler)
     signal.signal(signal.SIGTERM, self.end_process_handler)
 
-    while self.device_port_name not in mido.get_input_names():
+    device_ports_in, device_ports_out = self.get_device_port()
+    while device_ports_in is None or device_ports_out is None:
       time.sleep(2)
+      device_ports_in, device_ports_out = self.get_device_port()
 
-    with mido.open_output(self.device_port_name, autoreset=True) as output_port:
-      with mido.open_input(self.device_port_name, autoreset=True) as input_port:
+    with mido.open_output(device_ports_out, autoreset=True) as output_port:
+      with mido.open_input(device_ports_in, autoreset=True) as input_port:
         logger.debug(f'OUTPUT PORT: {output_port}')
         logger.debug(f'INPUT PORT: {input_port}')
 
